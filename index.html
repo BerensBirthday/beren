@@ -613,7 +613,7 @@
   <!-- ============ 4. FINAL ============ -->
   <section class="scene" id="s-final">
     <h2>Happy birthday, Beren! 🎉</h2>
-    <p class="soft">Seventeen wishes for seventeen years.</p>
+    <p class="soft">Seventeen wishes for seventeen years — one tap each.</p>
 
     <div class="wish-card" id="wishCard">
       <span class="wish-num" id="wishNum">1</span>
@@ -719,6 +719,76 @@ if (typeof confetti === "function") {
   };
 }
 
+/* ======================= SOUND ======================= */
+/* Everything here is synthesised — no audio files to load.
+   A candle going out is a short breath of filtered noise. */
+let audioCtx = null;
+let noiseBuf = null;
+
+function getAudio() {
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return null;
+  if (!audioCtx) audioCtx = new AC();
+  if (audioCtx.state === "suspended") audioCtx.resume();
+  return audioCtx;
+}
+
+function puff() {
+  const ctx = getAudio();
+  if (!ctx) return;
+
+  const dur = 0.22;
+
+  if (!noiseBuf) {
+    noiseBuf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * 0.4), ctx.sampleRate);
+    const d = noiseBuf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  }
+
+  const src = ctx.createBufferSource();
+  src.buffer = noiseBuf;
+  src.playbackRate.value = 0.9 + Math.random() * 0.3;
+
+  /* bandpass sweeping downwards = a breath, not a hiss */
+  const filter = ctx.createBiquadFilter();
+  filter.type = "bandpass";
+  filter.Q.value = 0.8;
+  const start = 750 + Math.random() * 500;
+
+  const gain = ctx.createGain();
+  const t = ctx.currentTime;
+
+  filter.frequency.setValueAtTime(start, t);
+  filter.frequency.exponentialRampToValueAtTime(260, t + dur);
+
+  gain.gain.setValueAtTime(0.0001, t);
+  gain.gain.exponentialRampToValueAtTime(0.38, t + 0.025);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+
+  src.connect(filter).connect(gain).connect(ctx.destination);
+  src.start(t);
+  src.stop(t + dur);
+}
+
+/* soft three-note sparkle when the last candle goes out */
+function chime() {
+  const ctx = getAudio();
+  if (!ctx) return;
+  [523.25, 659.25, 783.99].forEach((f, i) => {
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    const t = ctx.currentTime + i * 0.09;
+    osc.type = "sine";
+    osc.frequency.value = f;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.15, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.7);
+    osc.connect(g).connect(ctx.destination);
+    osc.start(t);
+    osc.stop(t + 0.75);
+  });
+}
+
 /* ======================= FLOATING EMOJIS ======================= */
 if (!reduceMotion) {
   const pool = ["🐾", "🎈", "⭐", "🌙", "🎂", "💛", "🐱"];
@@ -738,6 +808,7 @@ if (!reduceMotion) {
 
 /* ======================= 1. GIFT ======================= */
 document.getElementById("openGift").addEventListener("click", () => {
+  getAudio();              // first user gesture: wake the audio engine
   showScene("s-cake");
   shoot(.5);
 });
@@ -765,10 +836,12 @@ function blowOut(candle) {
   candle.classList.add("out");
   leftEl.textContent = remaining();
 
+  puff();
   if (navigator.vibrate) navigator.vibrate(12);
 
   if (remaining() === 0 && !finished) {
     finished = true;
+    chime();
     shoot(1);
     setTimeout(() => showScene("s-riddle"), 1400);
   }
@@ -800,13 +873,13 @@ micBtn.addEventListener("click", async () => {
   micBtn.textContent = "Starting the microphone…";
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    const ctx = new AudioCtx();
-    await ctx.resume();
+    const ctx = getAudio();
+    if (!ctx) throw new Error("no audio support");
 
     const analyser = ctx.createAnalyser();
     analyser.fftSize = 512;
-    ctx.createMediaStreamSource(stream).connect(analyser);
+    const micSrc = ctx.createMediaStreamSource(stream);
+    micSrc.connect(analyser);
 
     const data = new Uint8Array(analyser.frequencyBinCount);
     micBtn.textContent = "Now blow! 💨";
@@ -828,8 +901,8 @@ micBtn.addEventListener("click", async () => {
       if (remaining() > 0) {
         requestAnimationFrame(listen);
       } else {
-        stream.getTracks().forEach(t => t.stop());
-        ctx.close();
+        micSrc.disconnect();
+        stream.getTracks().forEach(t => t.stop());   // keep ctx open: it plays the puffs
       }
     })();
   } catch (err) {
