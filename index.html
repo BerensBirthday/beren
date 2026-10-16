@@ -349,14 +349,6 @@
     border: 1px solid var(--card-line);
   }
 
-  .hint {
-    margin: -4px 0 10px;
-    font-size: 12.5px;
-    font-weight: 600;
-    color: var(--ink-soft);
-    opacity: .8;
-  }
-
   .counter {
     margin-top: 16px;
     font-size: 15px;
@@ -584,7 +576,6 @@
   <section class="scene" id="s-cake">
     <h2>17 candles, 17 years 🎂</h2>
     <p class="soft">Blow them all out — tap the candles, or swipe your finger across them.</p>
-    <p class="hint">🔈 Best with sound on — iPhone: check the side silent switch.</p>
 
     <div class="cake-stage">
       <div class="candles" id="candles"></div>
@@ -765,7 +756,7 @@ function puff() {
   const ctx = getAudio();
   if (!ctx) return;
 
-  const dur = 0.26;
+  const dur = 0.22;
 
   if (!noiseBuf) {
     noiseBuf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * 0.4), ctx.sampleRate);
@@ -780,19 +771,17 @@ function puff() {
   /* bandpass sweeping downwards = a breath, not a hiss */
   const filter = ctx.createBiquadFilter();
   filter.type = "bandpass";
-  filter.Q.value = 0.7;
-  /* phone speakers are weak below ~500Hz, so keep the sweep up where
-     they are efficient — it also reads more like a puff than a rumble */
-  const start = 2200 + Math.random() * 900;
+  filter.Q.value = 0.8;
+  const start = 750 + Math.random() * 500;
 
   const gain = ctx.createGain();
   const t = ctx.currentTime;
 
   filter.frequency.setValueAtTime(start, t);
-  filter.frequency.exponentialRampToValueAtTime(620, t + dur);
+  filter.frequency.exponentialRampToValueAtTime(260, t + dur);
 
   gain.gain.setValueAtTime(0.0001, t);
-  gain.gain.exponentialRampToValueAtTime(0.9, t + 0.025);
+  gain.gain.exponentialRampToValueAtTime(0.38, t + 0.025);
   gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
 
   src.connect(filter).connect(gain).connect(ctx.destination);
@@ -811,7 +800,7 @@ function chime() {
     osc.type = "sine";
     osc.frequency.value = f;
     g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(0.24, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.15, t + 0.02);
     g.gain.exponentialRampToValueAtTime(0.0001, t + 0.7);
     osc.connect(g).connect(ctx.destination);
     osc.start(t);
