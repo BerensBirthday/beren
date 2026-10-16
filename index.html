@@ -386,43 +386,82 @@
   .feedback.good { color: #1aa06d; }
 
   /* ---------- WISHES ---------- */
-  .wish-head {
+  .wish-card {
+    position: relative;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    margin: 18px 0 8px;
-    font-size: 13px;
+    justify-content: center;
+    min-height: 124px;
+    margin: 18px 0 12px;
+    padding: 22px 18px;
+    background: var(--field);
+    border: 1px solid var(--card-line);
+    border-radius: 20px;
+    overflow: hidden;
+    cursor: pointer;
+    touch-action: pan-y;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .wish-num {
+    position: absolute;
+    top: 2px; right: 14px;
+    font-family: 'Baloo 2', sans-serif;
+    font-weight: 800;
+    font-size: 52px;
+    line-height: 1;
+    color: var(--pink);
+    opacity: .15;
+    pointer-events: none;
+  }
+  .wish-text { margin: 0; font-size: 17px; line-height: 1.5; }
+  .wish-card.swap .wish-text { animation: swap .3s ease; }
+  @keyframes swap {
+    from { opacity: 0; transform: translateY(9px); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  .wish-bar {
+    height: 5px;
+    border-radius: 999px;
+    background: var(--card-line);
+    overflow: hidden;
+  }
+  .wish-bar span {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--pink), var(--lilac));
+    transition: width .35s ease;
+  }
+
+  .wish-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 10px;
+    font-size: 12px;
     font-weight: 700;
-    letter-spacing: .1em;
+    letter-spacing: .12em;
     text-transform: uppercase;
     color: var(--ink-soft);
   }
-  .wish-head::before, .wish-head::after {
-    content: "";
-    flex: 1;
-    height: 1px;
-    background: var(--card-line);
-  }
-
-  .wishes { list-style: none; margin: 0; padding: 0; text-align: left; }
-  .wishes li {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 8px;
-    padding: 12px 14px;
+  .nav-btn {
+    width: 36px; height: 36px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    font: 700 20px 'Quicksand', system-ui, sans-serif;
+    color: var(--ink);
     background: var(--field);
     border: 1px solid var(--card-line);
-    border-radius: 16px;
-    animation: rise .35s ease;
+    border-radius: 50%;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
   }
-  .wishes .no {
-    flex: 0 0 24px;
-    font-family: 'Baloo 2', sans-serif;
-    font-weight: 800;
-    color: var(--pink);
-  }
-  .wishes .txt { font-size: 15.5px; line-height: 1.45; }
+  .nav-btn[disabled] { opacity: .3; }
+
+  .closing { margin-top: 18px; animation: rise .5s ease; }
 
   .sign {
     margin: 20px 0 0;
@@ -574,13 +613,24 @@
   <!-- ============ 4. FINAL ============ -->
   <section class="scene" id="s-final">
     <h2>Happy birthday, Beren! 🎉</h2>
-    <p>You are 17 — and this world deserves someone as curious and as clever as you.</p>
-    <p class="soft">May your new year be full of cats, full of laughter, and as brilliant as your mind.</p>
+    <p class="soft">Seventeen wishes for seventeen years — one tap each.</p>
 
-    <div class="wish-head" id="wishHead"><span id="wishNo">0 / 17 wishes</span></div>
+    <div class="wish-card" id="wishCard">
+      <span class="wish-num" id="wishNum">1</span>
+      <p class="wish-text" id="wishText"></p>
+    </div>
 
-    <button class="btn" id="wishBtn">🐾 Open a wish</button>
-    <ul class="wishes" id="wishList"></ul>
+    <div class="wish-bar"><span id="wishFill"></span></div>
+
+    <div class="wish-nav">
+      <button class="nav-btn" id="prevWish" type="button" aria-label="Previous wish" disabled>&lsaquo;</button>
+      <span id="wishNo">1 / 17 wishes</span>
+      <button class="nav-btn" id="nextWish" type="button" aria-label="Next wish">&rsaquo;</button>
+    </div>
+
+    <button class="btn" id="wishBtn">🐾 Next wish</button>
+
+    <p class="closing" id="closing" hidden>That is all of them. Have a year full of cats and full of laughter. 🎈</p>
 
     <!-- 👇 SIGNATURE: put your own name here -->
     <p class="sign">Happy birthday! 💛</p>
@@ -858,33 +908,69 @@ const WISHES = [
   "And an 18 as lovely as your 17."
 ];
 
-const wishBtn = document.getElementById("wishBtn");
-const wishList = document.getElementById("wishList");
-const wishNo = document.getElementById("wishNo");
-let opened = 0;
+const wishCard = document.getElementById("wishCard");
+const wishText = document.getElementById("wishText");
+const wishNum  = document.getElementById("wishNum");
+const wishNo   = document.getElementById("wishNo");
+const wishFill = document.getElementById("wishFill");
+const prevWish = document.getElementById("prevWish");
+const nextWish = document.getElementById("nextWish");
+const wishBtn  = document.getElementById("wishBtn");
+const closing  = document.getElementById("closing");
 
-wishBtn.addEventListener("click", () => {
-  if (opened >= WISHES.length) return;
+let idx = 0;
+let seenAll = false;
 
-  const text = WISHES[opened];
-  opened++;
+function showWish(i) {
+  idx = Math.max(0, Math.min(WISHES.length - 1, i));
+  const last = idx === WISHES.length - 1;
 
-  const li = document.createElement("li");
-  li.innerHTML = '<span class="no">' + opened + '</span><span class="txt"></span>';
-  li.querySelector(".txt").textContent = text;
-  wishList.appendChild(li);
+  wishNum.textContent = idx + 1;
+  wishText.textContent = WISHES[idx];
+  wishNo.textContent = (idx + 1) + " / " + WISHES.length + " wishes";
+  wishFill.style.width = ((idx + 1) / WISHES.length * 100) + "%";
 
-  wishNo.textContent = opened + " / " + WISHES.length + " wishes";
-  if (navigator.vibrate) navigator.vibrate(8);
+  /* restart the swap animation */
+  wishCard.classList.remove("swap");
+  void wishCard.offsetWidth;
+  wishCard.classList.add("swap");
 
-  if (opened === WISHES.length) {
-    wishBtn.disabled = true;
-    wishBtn.textContent = "17 wishes, 17 years 💛";
+  prevWish.disabled = idx === 0;
+  nextWish.disabled = last;
+  wishBtn.disabled = last;
+  wishBtn.textContent = last ? "17 wishes, 17 years 💛" : "🐾 Next wish";
+
+  if (last && !seenAll) {
+    seenAll = true;
+    closing.hidden = false;
     shoot(1.2);
-  } else {
-    li.scrollIntoView({ block: "nearest", behavior: reduceMotion ? "auto" : "smooth" });
   }
+}
+
+function step(d) {
+  if (d > 0 && idx === WISHES.length - 1) return;
+  if (d < 0 && idx === 0) return;
+  showWish(idx + d);
+  if (navigator.vibrate) navigator.vibrate(8);
+}
+
+wishBtn.addEventListener("click", () => step(1));
+nextWish.addEventListener("click", () => step(1));
+prevWish.addEventListener("click", () => step(-1));
+
+/* tap the card to advance, swipe to go either way */
+let startX = null;
+wishCard.addEventListener("pointerdown", e => { startX = e.clientX; });
+wishCard.addEventListener("pointerup", e => {
+  if (startX === null) return;
+  const dx = e.clientX - startX;
+  startX = null;
+  if (Math.abs(dx) > 40) step(dx < 0 ? 1 : -1);
+  else step(1);
 });
+
+showWish(0);
+
 </script>
 </body>
 </html>
