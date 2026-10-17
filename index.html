@@ -404,13 +404,13 @@
   }
   .wish-num {
     position: absolute;
-    top: 2px; right: 14px;
+    top: 0; right: 12px;
     font-family: 'Baloo 2', sans-serif;
     font-weight: 800;
-    font-size: 52px;
+    font-size: 44px;
     line-height: 1;
     color: var(--pink);
-    opacity: .15;
+    opacity: .12;
     pointer-events: none;
   }
   .wish-text { margin: 0; font-size: 17px; line-height: 1.5; }
@@ -460,8 +460,6 @@
     -webkit-tap-highlight-color: transparent;
   }
   .nav-btn[disabled] { opacity: .3; }
-
-  .closing { margin-top: 18px; animation: rise .5s ease; }
 
   .sign {
     margin: 20px 0 0;
@@ -575,7 +573,7 @@
   <!-- ============ 2. CAKE ============ -->
   <section class="scene" id="s-cake">
     <h2>17 candles, 17 years 🎂</h2>
-    <p class="soft">Blow them all out — tap the candles, or swipe your finger across them.</p>
+    <p class="soft">Blow them all out. Tap the candles, or swipe your finger across them.</p>
 
     <div class="cake-stage">
       <div class="candles" id="candles"></div>
@@ -607,12 +605,12 @@
       <button class="btn" type="submit">Check</button>
     </form>
     <p class="feedback" id="feedback" role="status" aria-live="polite"></p>
-    <button class="btn ghost" id="skipRiddle" hidden>Skip it — let's see the cake 🙂</button>
+    <button class="btn ghost" id="skipRiddle" hidden>Skip it, let's see the cake 🙂</button>
   </section>
 
   <!-- ============ 4. FINAL ============ -->
   <section class="scene" id="s-final">
-    <h2>Happy birthday, Beren! 🎉</h2>
+    <h2>Happy birthday, Beren!&nbsp;🎉&#8288;🎈</h2>
     <p class="soft">Seventeen wishes for seventeen years.</p>
 
     <div class="wish-card" id="wishCard">
@@ -630,10 +628,8 @@
 
     <button class="btn" id="wishBtn">🐾 Next wish</button>
 
-    <p class="closing" id="closing" hidden>That is all of them. Have a year full of cats and full of laughter. 🎈</p>
-
-    <!-- 👇 SIGNATURE: put your own name here -->
-    <p class="sign">Happy birthday! 💛</p>
+    <!-- 👇 SIGNATURE: put your own name under the blessing -->
+    <p class="sign" lang="tr">Allah uzun ömürler versin 💛</p>
   </section>
 
 </main>
@@ -928,7 +924,7 @@ micBtn.addEventListener("click", async () => {
     micBtn.hidden = true;
     const fb = document.createElement("p");
     fb.className = "counter";
-    fb.textContent = "The microphone didn't work — tap the candles instead 🙂";
+    fb.textContent = "The microphone didn't work. Tap the candles instead 🙂";
     micBtn.after(fb);
   }
 });
@@ -983,20 +979,20 @@ skipBtn.addEventListener("click", solved);
 const WISHES = [
   "A whole year full of laughter.",
   "Questions you know in every exam.",
-  "Street cats that always come to you.",
+  "Cats that come when you call.",
   "Your favourite song starting from the very beginning.",
   "Every plan in your head working out.",
   "Hot tea, a good book, a quiet evening.",
   "Curiosity that never runs out.",
-  "Days where you are kind to yourself.",
+  "Days where you're kind to yourself.",
   "Good news that arrives right on time.",
-  "Much laughing, little sadness.",
-  "The biggest slice of cake — always yours.",
+  "Prayers answered: the ones you say out loud, and the ones you don't.",
+  "The biggest slice of cake, always yours.",
   "The courage to take the path your heart knows.",
   "Sweet sleep, easy mornings.",
   "People who love you exactly as you are.",
   "That lovely thrill of learning something new.",
-  "The thing you have waited for finally happening.",
+  "The thing you've waited for, finally happening.",
   "And an 18 as lovely as your 17."
 ];
 
@@ -1008,7 +1004,6 @@ const wishFill = document.getElementById("wishFill");
 const prevWish = document.getElementById("prevWish");
 const nextWish = document.getElementById("nextWish");
 const wishBtn  = document.getElementById("wishBtn");
-const closing  = document.getElementById("closing");
 
 let idx = 0;
 let seenAll = false;
@@ -1034,7 +1029,6 @@ function showWish(i) {
 
   if (last && !seenAll) {
     seenAll = true;
-    closing.hidden = false;
     shoot(1.2);
   }
 }
